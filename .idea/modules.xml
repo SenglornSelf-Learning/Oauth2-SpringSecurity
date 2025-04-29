@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/Oauth2-Server.iml" filepath="$PROJECT_DIR$/.idea/Oauth2-Server.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/com.senglornOauth2.Oauth2-Server.main.iml" filepath="$PROJECT_DIR$/.idea/modules/com.senglornOauth2.Oauth2-Server.main.iml" />
     </modules>
   </component>
 </project>
