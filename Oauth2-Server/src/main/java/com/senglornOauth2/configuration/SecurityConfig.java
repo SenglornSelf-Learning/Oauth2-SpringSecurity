@@ -8,6 +8,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
@@ -17,31 +19,35 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
+import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
+import org.springframework.security.oauth2.server.authorization.settings.OAuth2TokenFormat;
+import org.springframework.security.oauth2.server.authorization.settings.TokenSettings;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 
+import java.time.Duration;
 import java.util.UUID;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-//    @Bean
-//    public PasswordEncoder passwordEncoder() {
-//        return new BCryptPasswordEncoder();
-//    }
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
     @Bean
     public UserDetailsService userDetailsService() {
         InMemoryUserDetailsManager manager = new InMemoryUserDetailsManager();
         manager.createUser(User.withUsername("admin")
-                .password("{noop}123")
+                .password(passwordEncoder().encode("123"))
                 .roles("ADMIN")
                 .build());
 
         manager.createUser(User.withUsername("user")
-                .password("{noop}123")
+                .password(passwordEncoder().encode("123"))
                 .roles("USER")
                 .build());
         return manager;
@@ -98,15 +104,38 @@ public class SecurityConfig {
     public RegisteredClientRepository registeredClientRepository() {
         RegisteredClient registeredClient = RegisteredClient.withId(UUID.randomUUID().toString())
                 .clientId("client")
-                .clientSecret("{bcrypt}$2a$12$m1OxZ1vK/gda/6.S6iYFnOYEwrXAwP42yzusQhypyjZ4cRVLaUGpy")
-                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
-                .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
-                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-                .redirectUri("http://localhost:8080/api/welcome")
+                .clientSecret(passwordEncoder().encode("123"))
                 .scope(OidcScopes.OPENID)
+                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST)
+                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_JWT)
+                //.authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+                .authorizationGrantTypes(grantTypes -> {
+                    grantTypes.add(AuthorizationGrantType.CLIENT_CREDENTIALS);
+                    grantTypes.add(AuthorizationGrantType.AUTHORIZATION_CODE);
+                    grantTypes.add(AuthorizationGrantType.REFRESH_TOKEN);
+                })
+                .redirectUri("http://localhost:8080/api/welcome")
+                .tokenSettings(tokenSettings())
+                .clientSettings(clientSettings())
                 .build();
 
         return new InMemoryRegisteredClientRepository(registeredClient);
+    }
+
+    public TokenSettings tokenSettings(){
+        return TokenSettings.builder()
+            .accessTokenFormat(OAuth2TokenFormat.SELF_CONTAINED)
+            .accessTokenTimeToLive(Duration.ofDays(1))
+            .reuseRefreshTokens(true)
+            .refreshTokenTimeToLive(Duration.ofDays(7))
+            .build();
+    }
+
+    public ClientSettings clientSettings(){
+        return ClientSettings.builder()
+            .requireAuthorizationConsent(true)
+            .requireProofKey(true)
+            .build();
     }
 }
