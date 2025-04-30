@@ -17,5 +17,3 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
-server:
-  port: 8090
